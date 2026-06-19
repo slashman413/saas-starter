@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaaS Starter — Production-ready Multi-tenant MVP (Demo)</title>
+<meta name="description" content="A production-ready multi-tenant SaaS starter built with Next.js 15, Prisma, Auth.js — auth, organizations, RBAC, billing, API keys, audit logs. Live product tour + architecture.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{brand:'#4f46e5'}}}}</script>
+<style>body{font-family:'Noto Sans TC',system-ui,sans-serif}.mono{font-family:ui-monospace,Menlo,monospace}</style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+<!-- Nav -->
+<header class="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+    <span class="font-black text-brand">◆ SaaS Starter</span>
+    <div class="flex items-center gap-2 text-sm">
+      <a href="https://github.com/slashman413/saas-starter" target="_blank" class="rounded-lg px-3 py-2 font-medium text-slate-600 hover:bg-slate-100">GitHub</a>
+      <a href="https://vercel.com/new/clone?repository-url=https://github.com/slashman413/saas-starter" target="_blank" class="rounded-lg bg-slate-900 px-3 py-2 font-medium text-white hover:bg-slate-700">▲ Deploy to Vercel</a>
+    </div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="mx-auto max-w-6xl px-5 pt-16 pb-10 text-center">
+  <span class="inline-block rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-brand">Next.js 15 · Prisma · Auth.js · TypeScript</span>
+  <h1 class="mt-4 text-4xl font-black tracking-tight sm:text-5xl">Ship your SaaS, <span class="text-brand">not the boilerplate.</span></h1>
+  <p class="mx-auto mt-4 max-w-2xl text-lg text-slate-600">一個達到生產標準的多租戶 SaaS 起手式：認證、組織、角色權限(RBAC)、訂閱計費、API 金鑰、稽核日誌 —— 全部內建、可直接擴充。</p>
+  <p class="mt-2 text-sm text-slate-400">⚠️ 此頁為「靜態產品導覽」(GitHub Pages 無後端)。完整應用需 Vercel + PostgreSQL，clone repo 即可運行。</p>
+</section>
+
+<!-- Product tour (browser frame with screen tabs) -->
+<section class="mx-auto max-w-5xl px-5 pb-12">
+  <div class="flex flex-wrap justify-center gap-2 pb-4">
+    <button onclick="show('login',this)" class="tab rounded-lg px-4 py-2 text-sm font-medium">登入 / 註冊</button>
+    <button onclick="show('dash',this)" class="tab rounded-lg px-4 py-2 text-sm font-medium">儀表板</button>
+    <button onclick="show('proj',this)" class="tab rounded-lg px-4 py-2 text-sm font-medium">Projects (CRUD)</button>
+    <button onclick="show('members',this)" class="tab rounded-lg px-4 py-2 text-sm font-medium">成員 / RBAC</button>
+    <button onclick="show('billing',this)" class="tab rounded-lg px-4 py-2 text-sm font-medium">計費</button>
+  </div>
+
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+    <div class="flex items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
+      <span class="h-3 w-3 rounded-full bg-red-400"></span><span class="h-3 w-3 rounded-full bg-amber-400"></span><span class="h-3 w-3 rounded-full bg-green-400"></span>
+      <span class="mono ml-3 rounded bg-white px-3 py-1 text-xs text-slate-400" id="urlbar">app.yoursaas.com/dashboard</span>
+    </div>
+    <div class="min-h-[420px] bg-slate-50 p-6" id="screen"></div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="mx-auto max-w-6xl px-5 py-12">
+  <h2 class="text-center text-2xl font-black">內建功能</h2>
+  <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" id="features"></div>
+</section>
+
+<!-- Architecture -->
+<section class="mx-auto max-w-5xl px-5 py-12">
+  <h2 class="text-center text-2xl font-black">系統架構</h2>
+  <pre class="mono mt-6 overflow-x-auto rounded-xl bg-slate-900 p-6 text-xs leading-relaxed text-slate-200">
+Browser ─► <span class="text-indigo-300">Next.js (single deployable)</span>
+            ├─ App Router (RSC + Client)  /  · /login · /dashboard · /projects · /settings/*
+            ├─ middleware.ts ── session guard
+            └─ <span class="text-emerald-300">Route Handlers</span> (the API layer)  app/api/**/route.ts
+                   │ Prisma                         │ API-key auth
+                   ▼                                ▼
+            <span class="text-amber-300">PostgreSQL</span>                    Public API  /api/v1/*  ◄── external clients
+                                                  Stripe webhook ─► subscription state
+  </pre>
+  <p class="mt-4 text-center text-sm text-slate-500">租戶隔離在 <code class="rounded bg-slate-200 px-1">lib/tenant.ts</code>，授權集中在 <code class="rounded bg-slate-200 px-1">lib/rbac.ts</code> —— 每個 handler 都以 organizationId 過濾資料。</p>
+</section>
+
+<!-- Stack + structure -->
+<section class="mx-auto max-w-6xl px-5 py-12">
+  <div class="grid gap-8 lg:grid-cols-2">
+    <div>
+      <h3 class="font-black">技術棧</h3>
+      <div class="mt-4 flex flex-wrap gap-2 text-sm">
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">Next.js 15 (App Router)</span>
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">TypeScript</span>
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">PostgreSQL</span>
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">Prisma ORM</span>
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">Auth.js (NextAuth v5)</span>
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">Tailwind CSS</span>
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">Zod</span>
+        <span class="rounded-lg bg-white px-3 py-1.5 shadow-sm">Stripe-ready</span>
+      </div>
+      <h3 class="mt-8 font-black">資料模型</h3>
+      <p class="mt-2 text-sm text-slate-600">User · Organization · Membership(role) · Invitation · Subscription · ApiKey · Project · AuditLog</p>
+    </div>
+    <div>
+      <h3 class="font-black">檔案結構</h3>
+      <pre class="mono mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-600">src/
+├─ auth.ts · middleware.ts
+├─ lib/  prisma · tenant · rbac · audit · api-auth · api
+├─ app/
+│  ├─ (auth)/login · register
+│  ├─ (dashboard)/ layout · dashboard · projects
+│  │   └─ settings/ members · api-keys · billing
+│  └─ api/ register · projects/[id] · members
+│         api-keys · billing/webhook · v1/projects
+└─ components/ui.tsx
+prisma/ schema.prisma · seed.ts</pre>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t border-slate-200 bg-white py-10 text-center text-sm text-slate-500">
+  <a href="https://github.com/slashman413/saas-starter" target="_blank" class="font-medium text-brand">github.com/slashman413/saas-starter</a>
+  <p class="mt-2 text-xs">© 2026 SaaS Starter · 靜態產品導覽。完整應用：<code>npm install &amp;&amp; npm run db:push &amp;&amp; npm run dev</code></p>
+</footer>
+
+<script>
+const F=[["🔐","Authentication","Email/密碼 (bcrypt) + OAuth，Auth.js JWT session"],["🏢","Multi-tenancy","Organization ↔ Membership ↔ User，資料全以 orgId 隔離"],["🛡️","RBAC","Owner / Admin / Member + 權限矩陣 assertCan()"],["💳","Billing","Subscription 模型 + Stripe webhook 骨架 + 方案 UI"],["🔑","API Keys","SHA-256 雜湊、僅顯示一次，供 /api/v1 公開 API"],["📝","Audit Logs","每筆異動記錄 who/what/when，依組織隔離"]];
+document.getElementById('features').innerHTML=F.map(([i,t,d])=>`<div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"><div class="text-2xl">${i}</div><h3 class="mt-3 font-bold">${t}</h3><p class="mt-1 text-sm text-slate-600">${d}</p></div>`).join('');
+
+const card='rounded-xl border border-slate-200 bg-white shadow-sm';
+const SCREENS={
+ login:{url:'app.yoursaas.com/login',html:`<div class="mx-auto max-w-sm ${card} p-8"><h3 class="text-lg font-bold">Welcome back</h3><p class="text-sm text-slate-500">Log in to your workspace.</p><div class="mt-5 space-y-3"><div><div class="text-xs font-medium text-slate-600">Email</div><div class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">owner@acme.test</div></div><div><div class="text-xs font-medium text-slate-600">Password</div><div class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">••••••••••</div></div><div class="rounded-lg bg-brand py-2 text-center text-sm font-medium text-white">Sign in</div></div></div>`},
+ dash:{url:'app.yoursaas.com/dashboard',html:`<div class="flex gap-6"><div class="hidden w-44 shrink-0 space-y-1 sm:block"><p class="px-2 text-xs text-slate-400">Acme Inc.</p>${['Overview','Projects','Members','API keys','Billing'].map((n,i)=>`<div class="rounded-lg px-3 py-2 text-sm ${i==0?'bg-indigo-50 font-medium text-brand':'text-slate-600'}">${n}</div>`).join('')}</div><div class="flex-1"><h3 class="text-xl font-bold">Overview</h3><div class="mt-4 grid grid-cols-3 gap-3">${[['Projects',3],['Members',4],['Audit events',8]].map(([l,v])=>`<div class="${card} p-4"><p class="text-xs text-slate-500">${l}</p><p class="text-2xl font-black">${v}</p></div>`).join('')}</div><h4 class="mt-6 text-sm font-bold">Recent activity</h4><div class="mt-2 ${card} divide-y divide-slate-100 text-sm">${[['Olivia Owner','project.create'],['Olivia Owner','member.invite'],['Acme API','project.create']].map(([a,ac])=>`<div class="flex justify-between px-4 py-2.5"><span><b>${a}</b> <span class="text-slate-500">${ac}</span></span><span class="text-xs text-slate-400">just now</span></div>`).join('')}</div></div></div>`},
+ proj:{url:'app.yoursaas.com/projects',html:`<h3 class="text-xl font-bold">Projects</h3><p class="text-sm text-slate-500">通用 CRUD 模組 —— 換成你的業務實體即可。</p><div class="mt-4 flex max-w-md gap-2"><div class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">New project name…</div><div class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white">Add</div></div><div class="mt-5 grid grid-cols-3 gap-3">${['Website redesign','Mobile app','Q3 marketing'].map(n=>`<div class="${card} p-4"><p class="font-semibold">${n}</p><p class="text-xs text-slate-400">2026-06-20</p></div>`).join('')}</div>`},
+ members:{url:'app.yoursaas.com/settings/members',html:`<h3 class="text-xl font-bold">Members</h3><div class="mt-4 flex max-w-lg gap-2"><div class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">teammate@company.com</div><div class="rounded-lg border border-slate-300 px-3 py-2 text-sm">Member ▾</div><div class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white">Invite</div></div><div class="mt-5 ${card} divide-y divide-slate-100 text-sm">${[['Olivia Owner','OWNER','bg-indigo-100 text-brand'],['Ada Admin','ADMIN','bg-slate-100'],['Marty Member','MEMBER','bg-slate-100'],['pending@co.com (pending)','MEMBER','bg-amber-50 text-amber-700']].map(([n,r,c])=>`<div class="flex justify-between px-4 py-2.5"><span>${n}</span><span class="rounded-full ${c} px-2 py-0.5 text-xs">${r}</span></div>`).join('')}</div>`},
+ billing:{url:'app.yoursaas.com/settings/billing',html:`<h3 class="text-xl font-bold">Billing</h3><p class="text-sm text-slate-500">Current plan: <b>pro</b> · status: <b>ACTIVE</b></p><div class="mt-5 grid grid-cols-3 gap-3">${[['Free','$0',0],['Pro','$29/mo',1],['Enterprise','Custom',0]].map(([n,p,cur])=>`<div class="${card} p-5 ${cur?'ring-2 ring-brand':''}"><p class="font-bold">${n}</p><p class="text-2xl font-black">${p}</p><div class="mt-3 rounded-lg ${cur?'bg-slate-200 text-slate-500':'bg-brand text-white'} py-2 text-center text-sm font-medium">${cur?'Current plan':'Upgrade'}</div></div>`).join('')}</div>`},
+};
+function show(k,btn){
+ document.getElementById('screen').innerHTML=SCREENS[k].html;
+ document.getElementById('urlbar').textContent=SCREENS[k].url;
+ document.querySelectorAll('.tab').forEach(t=>t.className='tab rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100');
+ if(btn) btn.className='tab rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white';
+}
+show('dash',document.querySelectorAll('.tab')[1]);
+</script>
+</body>
+</html>
