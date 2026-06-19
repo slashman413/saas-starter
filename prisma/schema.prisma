@@ -1,0 +1,189 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Prisma schema — Multi-tenant SaaS starter
+// Tenancy model: Users belong to Organizations via Memberships (with a Role).
+// All business data (e.g. Project) is scoped by organizationId.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Auth (Auth.js / NextAuth models) ─────────────────────────────────────────
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  name          String?
+  image         String?
+  passwordHash  String? // null for OAuth-only users
+  emailVerified DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  memberships  Membership[]
+  auditLogs    AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Tenancy: Organizations, Memberships, Roles ───────────────────────────────
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique // used in URLs / tenant resolution
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships  Membership[]
+  projects     Project[]
+  subscription Subscription?
+  apiKeys      ApiKey[]
+  invitations  Invitation[]
+  auditLogs    AuditLog[]
+
+  @@index([slug])
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role         @default(MEMBER)
+  createdAt      DateTime     @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Invitation {
+  id             String   @id @default(cuid())
+  email          String
+  role           Role     @default(MEMBER)
+  token          String   @unique
+  organizationId String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([email, organizationId])
+}
+
+// ── Billing (Stripe-ready skeleton) ──────────────────────────────────────────
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  organizationId       String             @unique
+  plan                 String             @default("free") // free | pro | enterprise
+  status               SubscriptionStatus @default(TRIALING)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ── API keys (programmatic access, scoped to an org) ─────────────────────────
+
+model ApiKey {
+  id             String    @id @default(cuid())
+  name           String
+  hashedKey      String    @unique // store only a hash; show the plaintext once on creation
+  prefix         String // first chars, shown in the UI for identification
+  organizationId String
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+// ── Generic business module (swap "Project" for your real entity) ────────────
+
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  status         String   @default("active") // active | archived
+  organizationId String
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+// ── Audit log (who did what, in which org) ───────────────────────────────────
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorId        String? // user id (null for system/API-key actions)
+  action         String // e.g. "project.create", "member.invite"
+  targetType     String? // e.g. "Project"
+  targetId       String?
+  metadata       Json?
+  ip             String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}
