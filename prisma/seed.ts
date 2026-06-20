@@ -28,10 +28,15 @@ async function main() {
     create: { userId: owner.id, organizationId: org.id, role: Role.OWNER },
   });
 
-  for (const name of ["Website redesign", "Mobile app", "Q3 marketing"]) {
-    await prisma.project.create({
-      data: { name, organizationId: org.id, createdById: owner.id },
-    });
+  // Idempotent: only seed demo projects when the org has none yet, so this
+  // script is safe to run on every deploy.
+  const existing = await prisma.project.count({ where: { organizationId: org.id } });
+  if (existing === 0) {
+    for (const name of ["Website redesign", "Mobile app", "Q3 marketing"]) {
+      await prisma.project.create({
+        data: { name, organizationId: org.id, createdById: owner.id },
+      });
+    }
   }
 
   console.log("✅ Seeded. Login: owner@acme.test / password123");

@@ -4,6 +4,20 @@ A batteries-included starting point for a B2B SaaS, built as a real startup MVP 
 
 **Stack:** Next.js 15 (App Router) · TypeScript · PostgreSQL · Prisma · Auth.js (NextAuth v5) · Tailwind CSS
 
+## 🚀 One-click deploy (near-zero config)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fslashman413%2Fsaas-starter&project-name=saas-starter&repository-name=saas-starter&env=AUTH_SECRET&envDescription=Random%2032-byte%20secret%20for%20session%20encryption&envLink=https%3A%2F%2Fgenerate-secret.vercel.app%2F32&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D)
+
+Click the button → it does the rest:
+
+1. **Clone** the repo into your GitHub.
+2. **Create database** — a Neon Postgres store is provisioned in the same flow (it injects `DATABASE_URL` automatically). One click.
+3. **Paste one secret** — `AUTH_SECRET`; the form links to a generator ([generate-secret.vercel.app/32](https://generate-secret.vercel.app/32)). Copy → paste.
+
+On deploy, `vercel-build` runs `prisma generate` → `prisma db push` → seed automatically, so the tables and a demo login are created for you — **no commands to run**. Live in ~2 clicks + one paste, then sign in with `owner@acme.test` / `password123`.
+
+> If the database step is skipped, the first build still succeeds; just add a Postgres store under **Project → Storage** and redeploy. See [DEPLOY.md](DEPLOY.md).
+
 ---
 
 ## ✨ Features
