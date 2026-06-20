@@ -1,18 +1,14 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/auth.config";
 
-// Protect the dashboard area. Unauthenticated users are redirected to /login.
-// Public API (/api/v1/*) is authenticated separately via API keys, so it's excluded.
+// Build an Edge-safe auth instance from the base config only (no adapter,
+// no bcrypt). The `authorized` callback in auth.config.ts decides access.
+const { auth } = NextAuth(authConfig);
+
 export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/settings");
-
-  if (isProtected && !req.auth) {
-    const url = new URL("/login", req.nextUrl.origin);
-    url.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(url);
-  }
-  return NextResponse.next();
+  // `authorized` already returned false for unauthenticated protected routes;
+  // NextAuth turns that into a redirect to the configured signIn page.
+  void req;
 });
 
 export const config = {

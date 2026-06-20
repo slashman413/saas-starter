@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Button, Input, Label, Card } from "@/components/ui";
 
 export default function LoginPage() {
+  // useSearchParams() must sit inside a Suspense boundary for static export.
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const callbackUrl = useSearchParams().get("callbackUrl") || "/dashboard";
   const [email, setEmail] = useState("");
@@ -40,7 +49,7 @@ export default function LoginPage() {
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Signing in." : "Sign in"}
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-500">

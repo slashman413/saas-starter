@@ -5,16 +5,19 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { authConfig } from "@/auth.config";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
 
+// Full (Node-runtime) config: extends the edge-safe base with the Prisma
+// adapter and the bcrypt-backed Credentials provider. This module is never
+// imported by the Edge middleware, so Node APIs (bcrypt) are safe here.
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" }, // required when using the Credentials provider
-  pages: { signIn: "/login" },
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
@@ -34,14 +37,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Enable Google only when env vars are present.
     ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [Google] : []),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) token.id = user.id;
-      return token;
-    },
-    session({ session, token }) {
-      if (token.id && session.user) session.user.id = token.id as string;
-      return session;
-    },
-  },
 });
